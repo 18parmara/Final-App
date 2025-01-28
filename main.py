@@ -2,325 +2,206 @@
 # TensorFlow Algorithm #
 ########################
 
-import numpy as np
-import matplotlib.pyplot as plt
-import pandas as pd
-import yfinance as yf
-import datetime as dt
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, LSTM
+def TensorFlow(data, prediction_days, epochs, batch_size, future_days):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    import datetime as dt
+    from sklearn.preprocessing import MinMaxScaler
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import Dense, Dropout, LSTM
 
-# Loading data
-securities = ["META", "^GSPC", "EURUSD=X"]
-print('''
-1. META
-2. S&P500
-3. EUR/USD
-''')
-security_select = int(input("Select the security to predict >> "))
+    # Prep data
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(data["Close"].values.reshape(-1, 1))
 
-security_name = securities[security_select-1]
-ticker = yf.Ticker(security_name)
+    # Make training arrays
+    x_train = []
+    y_train = []
 
-start = dt.datetime(1990,1,1)
-end = dt.datetime(2022,1,1)
+    # Append historic data
+    for x in range(prediction_days, len(scaled_data)):
+        x_train.append(scaled_data[x - prediction_days:x, 0])
+        y_train.append(scaled_data[x, 0])
 
-data = ticker.history(period = "max")
+    # Convert to NumPy arrays
+    x_train = np.array(x_train)
+    y_train = np.array(y_train)
+    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
-# Prep data
-scaler = MinMaxScaler(feature_range = (0,1))
-scaled_data = scaler.fit_transform(data["Close"].values.reshape(-1,1))
+    # Building model
+    model = Sequential()
 
-#prediction_days = 60
-prediction_days = int(input("How many previous days do you want to consider >> "))
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
+    model.add(Dropout(0.2))
+    model.add(LSTM(units=50, return_sequences=True))
+    model.add(Dropout(0.2))
+    model.add(LSTM(units=50))
+    model.add(Dropout(0.2))
+    model.add(Dense(units=1))  # Prediction of next closing price
+    model.compile(optimizer="adam", loss="mean_squared_error")
+    model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size)
 
+    # Setting start time and future target
+    test_start = dt.datetime(2022, 1, 1)
+    future_days = future_days
 
-x_train = []
-y_train = []
+    # Loading data
+    test_data = ticker.history(period="2y")
+    real_prices = test_data["Close"].values
+    total_dataset = pd.concat((data["Close"], test_data["Close"]))
 
-for x in range(prediction_days, len(scaled_data)):
-    x_train.append(scaled_data[x-prediction_days:x, 0])
-    y_train.append(scaled_data[x, 0])
+    # Prepping inputs
+    model_inputs = total_dataset[len(total_dataset) - len(test_data) - prediction_days:].values
+    model_inputs = model_inputs.reshape(-1, 1)
+    model_inputs = scaler.transform(model_inputs)
 
-x_train = np.array(x_train)
-y_train = np.array(y_train)
-x_train = np.reshape(x_train, (x_train.shape[0],x_train.shape[1], 1))
+    # Prepare the last `prediction_days` inputs for future predictions
+    last_sequence = model_inputs[-prediction_days:]  # Take the last `prediction_days` values
+    last_sequence = np.reshape(last_sequence, (1, prediction_days, 1))  # Reshape to match model input
 
-# Building model
-model = Sequential()
+    # Store predictions
+    future_predictions = []
 
-model.add(LSTM(units = 50, return_sequences = True, input_shape = (x_train.shape[1],1)))
-model.add(Dropout(0.2))
-model.add(LSTM(units = 50, return_sequences = True))
-model.add(Dropout(0.2))
-model.add(LSTM(units = 50))
-model.add(Dropout(0.2))
-model.add(Dense(units = 1)) # Prediction of next closing price
-#epochs = 25
-#batch_size = 32
-epochs = int(input("How many epochs to train the model >> "))
-batch_size = int(input("What batch size for training the model >> "))
-model.compile(optimizer = "adam", loss = "mean_squared_error")
-model.fit(x_train, y_train, epochs = epochs, batch_size = batch_size)
+    # Predict future prices
+    for i in range(future_days):
+        # Predict the next price
+        predicted_price = model.predict(last_sequence)
 
-# Testing model accuracy on past data
+        # Inverse transform to get the price back to the original scale
+        predicted_price = scaler.inverse_transform(predicted_price)
+        future_predictions.append(predicted_price[0, 0])  # Save the predicted price
 
-# Loading test data
-test_start = dt.datetime(2022,1,1)
-test_end = dt.datetime.now()
+        # Update `last_sequence` with the new prediction
+        new_input = scaler.transform([[predicted_price[0, 0]]])  # Scale the new prediction
+        new_input = np.reshape(new_input, (1, 1, 1))  # Reshape to match (1, 1, 1) for concatenation
+        last_sequence = np.append(last_sequence[:, 1:, :], new_input, axis=1)
 
-test_data = ticker.history(period = "2y")
-real_prices = test_data["Close"].values
+    # STORING HISTORICAL PREDICTIONS
+    # Storing past prices
+    x_past = []
 
-total_dataset = pd.concat((data["Close"], test_data["Close"]))
+    # Filling x_past
+    for i in range(prediction_days, len(model_inputs)):
+        x_past.append(model_inputs[i - prediction_days:i, 0])
 
-model_inputs = total_dataset[len(total_dataset) - len(test_data) - prediction_days:].values
-model_inputs = model_inputs.reshape(-1, 1)
-model_inputs = scaler.transform(model_inputs)
+    # Prepping x_past
+    x_past = np.array(x_past)
+    x_past = np.reshape(x_past, (x_past.shape[0], x_past.shape[1], 1))
 
-# Making predictions for test data
+    # Predicting for x_past
+    predicted_prices = model.predict(x_past)
+    predicted_prices = scaler.inverse_transform(predicted_prices)
 
-x_test = []
-
-for i in range(prediction_days, len(model_inputs)):
-    x_test.append(model_inputs[i - prediction_days:i, 0])
-
-x_test = np.array(x_test)
-x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
-
-predicted_prices = model.predict(x_test)
-predicted_prices = scaler.inverse_transform(predicted_prices)
-
-# Plotting
-plt.plot(real_prices, color = "blue", label = f"Real {security_name} Price")
-plt.plot(predicted_prices, color = "red", label = f"Predicted {security_name} Price")
-plt.title(f"{security_name} Real vs Predicted Share Price (Prediction Days: {prediction_days}, Epochs: {epochs}, Batch Size: {batch_size})")
-plt.xlabel("Time")
-plt.ylabel("Share Price")
-plt.legend()
-plt.show()
+    # Plot real prices and future predictions
+    plt.plot(predicted_prices, color="red", label=f"Predicted {security_name} Price")
+    plt.plot(real_prices, label="Real Prices")
+    plt.plot(range(len(real_prices), len(real_prices) + future_days), future_predictions, label="Future Predictions")
+    plt.xlabel("Days")
+    plt.ylabel("Price")
+    plt.legend()
+    plt.show()
 
 #################
 # ARP Algorithm #
 #################
-import yfinance as yf
-import pandas as pd
+def ARP_algorithm(prices, prob):
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from sklearn.ensemble import RandomForestClassifier
+
+    # Drop unnecessary columns
+    prices.drop(columns=["Dividends", "Stock Splits"], inplace=True)
+
+    # Add target column
+    prices["Tomorrow"] = prices["Close"].shift(-1)
+    prices["Target"] = (prices["Tomorrow"] > prices["Close"]).astype(int)
+
+    # Limit data to after 1990
+    prices = prices.loc["1990-01-01":].copy()
+
+    # Define training and testing sets
+    train = prices.iloc[:-100]
+    test = prices.iloc[-100:]
+
+    # Initial predictors
+    predictors = ["Close", "Volume", "Open", "High", "Low"]
+
+    # Add rolling predictors
+    horizons = [2, 5, 60, 250, 1000]  # Different time horizons
+    new_predictors = []
+
+    for horizon in horizons:
+        # Rolling averages
+        rolling_averages = prices["Close"].rolling(horizon).mean()
+        prices[f"Close_Ratio_{horizon}"] = prices["Close"] / rolling_averages
+
+        # Rolling trend
+        trend_sum = prices["Target"].shift(1).rolling(horizon).sum()
+        prices[f"Trend_{horizon}"] = trend_sum
+
+        # Add columns to predictors
+        new_predictors += [f"Close_Ratio_{horizon}", f"Trend_{horizon}"]
+
+    # Drop rows with NaNs introduced by rolling computations
+    prices.dropna(inplace=True)
+
+    # Update training and testing sets after dropping NaNs
+    train = prices.iloc[:-100]
+    test = prices.iloc[-100:]
+
+    # Combine initial and new predictors
+    both_predictors = predictors + new_predictors
+
+    # Define model
+    model = RandomForestClassifier(n_estimators=100, min_samples_split=100, random_state=1)
+
+    # Define prediction function
+    def predict(train, test, predictors, model, prob):
+        model.fit(train[predictors], train["Target"])
+        preds = model.predict_proba(test[predictors])[:, 1]
+        preds[preds >= prob] = 1
+        preds[preds < prob] = 0
+        preds = pd.Series(preds, index=test.index, name="Predictions")
+        combined = pd.concat([test["Target"], preds], axis=1)
+        return combined
+
+    # Generate predictions
+    predictions = predict(train, test, new_predictors, model, prob)
+
+    # Check the newest value in the predictions and print BUY or SELL
+    latest_prediction = predictions["Predictions"].iloc[-1]
+    if latest_prediction == 1:
+        action = "Buy"
+        colour = "green"
+    else:
+        action = "Sell"
+        colour = "red"
+
+    # Plot the prices
+    plt.figure(figsize=(10, 6))
+    plt.plot(prices["Close"], label="Actual Prices", color="blue", alpha=0.7)
+    plt.title("Stock Prices with Prediction", fontsize=14)
+    plt.xlabel("Date", fontsize=12)
+    plt.ylabel("Price", fontsize=12)
+
+    # Add the text on the chart for the newest prediction
+    plt.text(
+        x=0.02,  # Relative x-position (2% from the left)
+        y=0.93,  # Relative y-position (93% from the bottom)
+        s=action,  # Buy/Sell
+        color=colour,
+        fontsize=20,
+        weight="bold",
+        transform=plt.gca().transAxes,  # Use axes coordinates for positioning
+        horizontalalignment="left"
+    )
+
+    # Add legend and grid
+    plt.legend(["Actual Prices"])
+    plt.grid(alpha=0.3)
+    plt.show()
 
-sp500 = yf.Ticker("^GSPC")
-sp500 = sp500.history(period = "max")
-
-
-# In[3]:
-
-
-print(sp500)
-print(sp500.index)
-
-sp500.plot.line(y = "Close", use_index = True)
-
-del sp500["Dividends"]
-del sp500["Stock Splits"]
-
-sp500["Tomorrow"] = sp500["Close"].shift(-1)
-
-print(sp500)
-
-sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)
-
-# this makes it so that a True is given as a 1 and False as a 0
-print(sp500)
-
-sp500 = sp500.loc["1990-01-01":].copy()
-
-print(sp500)
-
-from sklearn.ensemble import RandomForestClassifier
-
-model = RandomForestClassifier(n_estimators = 100, min_samples_split = 100, random_state = 1)
-
-train = sp500.iloc[:-100]
-test = sp500.iloc[-100:]
-
-predictors = ["Close", "Volume", "Open", "High", "Low"]
-model.fit(train[predictors], train["Target"])
-
-from sklearn.metrics import precision_score
-
-preds = model.predict(test[predictors])
-
-print(preds)
-
-preds = pd.Series(preds, index = test.index)
-
-print(preds)
-
-precision_score(test["Target"], preds)
-
-# Here it is shown that the model we have trained is only accurate 50% of the time.
-
-combined = pd.concat([test["Target"], preds], axis = 1)
-
-combined.plot()
-
-
-# START OF BACKTESTING
-
-def predict(train, test, predictors, model):
-    model.fit(train[predictors], train["Target"])
-    preds = model.predict(test[predictors])
-    preds = pd.Series(preds, index = test.index, name = "Predictions")
-    combined = pd.concat([test["Target"], preds], axis = 1)
-    return combined
-
-def backtest(data, model, predictors, start = 2500 , step = 250):
-    all_predictions = []
-
-    for i in range(start, data.shape[0], step):
-        train = data.iloc[0:i].copy()
-        test = data.iloc[i:(i + step)].copy()
-        predictions = predict(train, test, predictors, model)
-        all_predictions.append(predictions)
-    return pd.concat(all_predictions)
-
-predictions = backtest(sp500, model, predictors)
-
-
-predictions["Predictions"].value_counts()
-
-
-precision_score(predictions["Target"], predictions["Predictions"])
-
-
-# To see the percentage of days the market went up, we can do this by taking the number of each outcomes of the target and dividing it by the number of days (rows)
-
-predictions["Target"].value_counts() / predictions.shape[0]
-
-
-# ADDING NEW PREDICTORS
-
-horizons = [2, 5, 60, 250, 1000] #2 days, 5 days, 3 months, 1 year and 4 years
-new_predictors = []
-for horizon in horizons:
-    rolling_averages = sp500.rolling(horizon).mean()
-    ratio_column = f"Close_Ratio_{horizon}"
-    sp500[ratio_column] = sp500["Close"] / rolling_averages["Close"]
-
-    trend_column = f"Trend_{horizon}"
-    sp500[trend_column] = sp500.shift(1).rolling(horizon).sum()["Target"]
-
-    new_predictors += [ratio_column, trend_column]
-
-print(sp500)
-
-sp500 = sp500.dropna()
-
-print(sp500)
-
-
-# just new predictors and using probs
-
-# *********
-
-# UPDATING MODEL V1 (old and new predictors)
-
-both_predictors = predictors + new_predictors
-
-print(both_predictors)
-
-
-print(predictors)
-
-print(new_predictors)
-
-model = RandomForestClassifier(n_estimators = 200, min_samples_split = 50, random_state = 1)
-
-def predict(train, test, predictors, model):
-    model.fit(train[predictors], train["Target"])
-    preds = model.predict(test[predictors])
-    preds = pd.Series(preds, index = test.index, name = "Predictions")
-    combined = pd.concat([test["Target"], preds], axis = 1)
-    return combined
-
-predictions = backtest(sp500, model, both_predictors)
-
-predictions["Predictions"].value_counts()
-
-precision_score(predictions["Target"], predictions["Predictions"])
-
-
-# UPDATING MODEL V2 (just new predictors)
-
-predictions = backtest(sp500, model, new_predictors)
-
-predictions["Predictions"].value_counts()
-
-precision_score(predictions["Target"], predictions["Predictions"])
-
-# UPDATING MODEL V3 (the best predictor combination used and prababilities)
-
-model = RandomForestClassifier(n_estimators = 200, min_samples_split = 50, random_state = 1)
-
-def predict(train, test, predictors, model):
-    model.fit(train[predictors], train["Target"])
-    preds = model.predict_proba(test[predictors])[:,1]
-    preds[preds >= 0.6] = 1
-    preds[preds < 0.6] = 0
-    preds = pd.Series(preds, index = test.index, name = "Predictions")
-    combined = pd.concat([test["Target"], preds], axis = 1)
-    return combined
-
-predictions = backtest(sp500, model, new_predictors)
-
-predictions["Predictions"].value_counts()
-
-precision_score(predictions["Target"], predictions["Predictions"])
-
-# *********
-
-# MAKING OPTIMISE FUNCTION
-
-def opt_predict(train, test, predictors, model, prob):
-    model.fit(train[predictors], train["Target"])
-    preds = model.predict_proba(test[predictors])[:,1]
-    preds[preds >= prob] = 1
-    preds[preds < prob] = 0
-    preds = pd.Series(preds, index = test.index, name = "Predictions")
-    combined = pd.concat([test["Target"], preds], axis = 1)
-    return combined
-
-def opt_backtest(data, model, predictors, prob, start = 2500 , step = 250):
-    all_predictions = []
-
-    for i in range(start, data.shape[0], step):
-        train = data.iloc[0:i].copy()
-        test = data.iloc[i:(i + step)].copy()
-        predictions = opt_predict(train, test, predictors, model, prob)
-        all_predictions.append(predictions)
-    return pd.concat(all_predictions)
-
-def optimise(data, model, predictors, lower, upper, step):
-    results = [[],[]]
-    test_prob = lower
-    while test_prob < (upper + step):
-        predictions = opt_backtest(sp500, model, predictors, test_prob)
-        results[1].append(precision_score(predictions["Target"], predictions["Predictions"]))
-        results[0].append(round(test_prob, 2))
-        test_prob = test_prob + round(step, 2)
-    return results
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-results = optimise(sp500, model, new_predictors, 0.5, 0.75, 0.005)
-
-print(results)
-
-xpoints = np.array(results[0])
-ypoints = np.array(results[1])
-
-plt.plot(xpoints, ypoints)
-plt.show()
 
 ################
 # CustomTk GUI #
@@ -393,5 +274,36 @@ frame3.rowconfigure(1, weight=1)
 # run
 window.mainloop()
 
+#########
+# START #
+#########
 
+# FOR TF
+import yfinance as yf
+import datetime as dt
+securities = ["META", "^GSPC", "EURUSD=X"]
+print('''
+1. META
+2. S&P500
+3. EUR/USD
+''')
+# taking inputs for TF
+security_select = int(input("Select the security to predict >> "))
+prediction_days = int(input("Enter the number of prediction days"))
+epochs = int(input("Enter the number of training epochs"))
+batch_size = int(input("Enter the training batch size"))
+future_days = int(input("Enter number of days you want to predict"))
+security_name = securities[security_select-1]
+ticker = yf.Ticker(security_name)
 
+start = dt.datetime(1990,1,1)
+end = dt.datetime(2022,1,1)
+
+data = ticker.history(period = "max")
+
+TensorFlow(data, prediction_days, epochs, batch_size, 15)
+
+# FOR APR
+prices = yf.Ticker("^GSPC")
+prices = prices.history(period="max")
+ARP_algorithm(prices, 0.68)

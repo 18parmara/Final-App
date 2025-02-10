@@ -213,7 +213,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("NEA Custom Theme.json")
 
 window = ctk.CTk()  # Use CTk instead of Tk
-window.title("CustomTkinter Transition")
+window.title("Learn Stocks")
 window.geometry("1000x800")
 
 # Making notebook (CustomTkinter doesn't have a direct notebook widget, so I use CTkTabview)
@@ -221,55 +221,182 @@ notebook = ctk.CTkTabview(master=window, width=1000, height=1000)
 notebook.pack(expand=True, fill="both")
 
 # Adding tabs
-notebook.add("Tab 1")
-notebook.add("Tab 2")
-notebook.add("Tab 3")
+notebook.add("Data")
+notebook.add("Settings")
+notebook.add("Output")
 
 # Getting frames for each tab
-frame1 = notebook.tab("Tab 1")
-frame2 = notebook.tab("Tab 2")
-frame3 = notebook.tab("Tab 3")
+Stage1 = notebook.tab("Data")
+Stage2 = notebook.tab("Settings")
+Stage3 = notebook.tab("Output")
 
-# Making UI elements
-# Frame 1
-label1 = ctk.CTkLabel(master=frame1, text="This is tab 1")
-label1.pack(expand=True, fill="both")
+# CONTENT FOR STAGE1
+# main layout widgets
+S1_banner_frame = ctk.CTkFrame(master=Stage1)
+S1_main_frame = ctk.CTkFrame(master=Stage1)
+S1_main_left_frame = ctk.CTkFrame(master=S1_main_frame)
+S1_main_right_frame = ctk.CTkFrame(master=S1_main_frame)
 
-from customtkinter import filedialog
-def openFile():
-    filepath = filedialog.askopenfile(title = "Open a CSV file",
-                                          filetypes = [("Comma Separated Values", "*.csv")])
-    file = open(filepath, "r")
-    print(file.read())
-    file.close()
+# GRID CONFIG
+# left column
+S1_main_left_frame.columnconfigure((0, 1, 2), weight = 1)
+S1_main_left_frame.rowconfigure((0, 1, 2, 3, 4), weight = 1)
 
-file_button = ctk.CTkButton(master=frame1, text="Open", command=openFile)
-file_button.pack()
+# right column
+S1_main_right_frame.columnconfigure((0, 1, 2), weight = 1)
+S1_main_right_frame.rowconfigure((0, 1, 2, 3, 4), weight = 1)
 
-# Frame 2
-label2 = ctk.CTkLabel(frame2, text="This is tab 2")
-button1 = ctk.CTkButton(frame2, text="Button 1")
-button2 = ctk.CTkButton(frame2, text="Button 2")
-# Adding a slider to Tab 2
-slider = ctk.CTkSlider(frame2, from_=0, to=100)  # Slider range from 0 to 100
-slider.pack(pady=20)  # Add vertical padding for spacing
-button1.pack(pady=10)
-button2.pack(pady=10)
-label2.pack(expand=True, fill="both")
+# Banner
+S1_banner_frame.place(x = 0, y = 0, relwidth = 1, relheight = 0.2)
+ctk.CTkLabel(S1_banner_frame, bg_color ="green", text="HEADER").pack(expand = True, fill ="both")
+S1_main_frame.place(x = 0, rely = 0.2, relwidth = 1, relheight = 0.8)
 
-# Frame 3
-label3 = ctk.CTkLabel(frame3, text="This is tab 3")
-entry1 = ctk.CTkEntry(frame3)
-entry2 = ctk.CTkEntry(frame3)
-label3.grid(row=0, column=0, padx=10, pady=10)
-entry1.grid(row=1, column=0, padx=10, pady=10)
-entry2.grid(row=1, column=1, padx=10, pady=10)
+# Left column
+S1_main_left_frame.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
+ctk.CTkLabel(S1_main_left_frame, text="Online").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(S1_main_left_frame, text="L IMAGE", bg_color ="red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+STAGE1_L_button = ctk.CTkButton(master=S1_main_left_frame, text="LEFT").grid(row = 4, column = 1, sticky="ew", columnspan = 1)
 
-# frame 3 grid weighting
-frame3.columnconfigure(0, weight=1)
-frame3.columnconfigure(1, weight=1)
-frame3.rowconfigure(0, weight=1)
-frame3.rowconfigure(1, weight=1)
+# Right column
+S1_main_right_frame.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+ctk.CTkLabel(master=S1_main_right_frame, text="Local").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(master=S1_main_right_frame, text="R IMAGE", bg_color ="red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+STAGE1_R_button = ctk.CTkButton(master=S1_main_right_frame, text="RIGHT").grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+
+# CONTENT FOR STAGE2
+# main layout widgets
+S2_banner_frame = ctk.CTkFrame(master=Stage2)
+S2_main_frame = ctk.CTkFrame(master=Stage2)
+S2_main_left_frame = ctk.CTkFrame(master=S2_main_frame)
+S2_main_right_frame = ctk.CTkFrame(master=S2_main_frame)
+
+
+# Grid Config
+# left column
+S2_main_left_frame.columnconfigure((0,1,2), weight = 1)
+S2_main_left_frame.rowconfigure((0,1,2,3,4), weight = 1)
+
+# right column
+S2_main_right_frame.columnconfigure((0,1,2), weight = 1)
+S2_main_right_frame.rowconfigure((0,1,2,3,4), weight = 1)
+
+
+# place layout
+S2_banner_frame.place(x = 0, y = 0, relwidth = 1, relheight = 0.2)
+ctk.CTkLabel(S2_banner_frame, bg_color = "green", text="HEADER").pack(expand = True, fill = "both")
+
+S2_main_frame.place(x = 0, rely = 0.2, relwidth = 1, relheight = 0.8)
+#ctk.CTkLabel(S2_main_frame, bg_color = "blue").pack(expand = True, fill = "both")
+
+S2_main_left_frame.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
+S2_main_right_frame.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+
+# APR settings pane
+S2_APR_settings_frame = ctk.CTkFrame(master=S2_main_frame)
+prob_slider = ctk.DoubleVar(value=5)  # Initial value set to 50
+
+# Function to update the label with prob_slider value
+def prob_update_value(value):
+    prob_slider.set(value)
+    label.configure(text=f"Value: {round(prob_slider.get())}")  # Format to 2 decimal places
+
+# Label to display the value
+label = ctk.CTkLabel(S2_APR_settings_frame, text=f"Value: {prob_slider.get()}")
+label.pack(pady=20)
+
+# Slider
+prob_slider = ctk.CTkSlider(S2_APR_settings_frame, from_=0, to=10, command=prob_update_value)
+prob_slider.set(prob_slider.get())  # Set initial value
+prob_slider.pack(pady=20)
+
+# Dropdown box
+company = ctk.CTkComboBox(S2_APR_settings_frame, values=["company 1", "company 2"])
+company.set("select a company")
+company.pack(pady=20)
+# APR settings pane
+S2_APR_settings_frame = ctk.CTkFrame(master=S2_main_frame)
+prob_slider = ctk.DoubleVar(value=5)  # Initial value set to 5
+
+# Function to update the label with prob_slider value
+def update_value(value):
+    prob_slider.set(value)
+    label.configure(text=f"Value: {round(prob_slider.get())}")  # Format to 2 decimal places
+
+# Label to display the value
+label = ctk.CTkLabel(S2_APR_settings_frame, text=f"Value: {prob_slider.get()}")
+label.pack(pady=20)
+
+# Slider
+prob_slider = ctk.CTkSlider(S2_APR_settings_frame, from_=0, to=10, command=update_value)
+prob_slider.set(prob_slider.get())  # Set initial value
+prob_slider.pack(pady=20)
+
+# Dropdown box
+company = ctk.CTkComboBox(S2_APR_settings_frame, values=["company 1", "company 2"])
+company.set("select a company")
+company.pack(pady=20)
+
+# TF settings pane
+S2_TF_settings_frame = ctk.CTkFrame(master=S2_main_frame)
+
+# Sliders
+# Slider update functions
+def epoch_update_value(value):
+    epoch_slider.set(value)
+    epoch_label.configure(text=f"Value: {round(epoch_slider.get())}")  # Format to 2 decimal places
+
+def pred_days_update_value(value):
+    pred_days_slider.set(value)
+    pred_days_label.configure(text=f"Value: {round(pred_days_slider.get())}")  # Format to 2 decimal places
+
+def batch_size_update_value(value):
+    batch_size_slider.set(value)
+    batch_size_label.configure(text=f"Value: {round(batch_size_slider.get())}")  # Format to 2 decimal places
+
+epoch_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=0, to=10, command=epoch_update_value)
+epoch_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Value: {epoch_slider.get()}")
+epoch_label.pack(pady=20)
+epoch_slider.pack(pady=20)
+
+pred_days_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=0, to=10, command=pred_days_update_value)
+pred_days_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Value: {pred_days_slider.get()}")
+pred_days_label.pack(pady=20)
+pred_days_slider.pack(pady=20)
+
+batch_size_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=0, to=10, command=batch_size_update_value)
+batch_size_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Value: {batch_size_slider.get()}")
+batch_size_label.pack(pady=20)
+batch_size_slider.pack(pady=20)
+
+
+def STAGE2_L_button_action():
+    if S2_main_right_frame.winfo_ismapped():
+        S2_main_right_frame.place_forget()
+        S2_APR_settings_frame.place(relx=0.5, rely=0, relwidth=0.5, relheight=1)
+
+    else:
+        S2_main_right_frame.place(relx=0.5, rely=0, relwidth=0.5, relheight=1)
+        S2_APR_settings_frame.place_forget()
+
+def STAGE2_R_button_action():
+    if S2_main_left_frame.winfo_ismapped():
+        S2_main_left_frame.place_forget()
+        S2_TF_settings_frame.place(relx=0, rely=0, relwidth=0.5, relheight=1)
+    else:
+        S2_main_left_frame.place(relx=0, rely=0, relwidth=0.5, relheight=1)
+        S2_TF_settings_frame.place_forget()
+
+
+# left column content
+ctk.CTkLabel(S2_main_left_frame, text="APR").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(S2_main_left_frame, text="", bg_color = "red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+STAGE2_L_button = ctk.CTkButton(master=S2_main_left_frame, text="LEFT", command=STAGE2_L_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+
+# right column content
+ctk.CTkLabel(master=S2_main_right_frame, text="TensorFlow").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(master=S2_main_right_frame, text="R IMAGE", bg_color = "red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+ctk.CTkLabel(master=S2_main_right_frame, text="How to keep text in a frame").grid(row = 3, column = 0, sticky="nesw", columnspan = 3)
+STAGE2_R_button = ctk.CTkButton(master=S2_main_right_frame, text="RIGHT", command=STAGE2_R_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
 
 # run
 window.mainloop()

@@ -2,7 +2,7 @@
 # TensorFlow Algorithm #
 ########################
 
-def TensorFlow(data, prediction_days, epochs, batch_size, future_days):
+def TensorFlow(data, prediction_days, epochs, batch_size, future_days, security_name):
     import numpy as np
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -47,7 +47,7 @@ def TensorFlow(data, prediction_days, epochs, batch_size, future_days):
     future_days = future_days
 
     # Loading data
-    test_data = ticker.history(period="2y")
+    test_data = data
     real_prices = test_data["Close"].values
     total_dataset = pd.concat((data["Close"], test_data["Close"]))
 
@@ -93,14 +93,16 @@ def TensorFlow(data, prediction_days, epochs, batch_size, future_days):
     predicted_prices = model.predict(x_past)
     predicted_prices = scaler.inverse_transform(predicted_prices)
 
-    # Plot real prices and future predictions
+    # Plot real prices and future prediction
+    global plt
     plt.plot(predicted_prices, color="red", label=f"Predicted {security_name} Price")
     plt.plot(real_prices, label="Real Prices")
     plt.plot(range(len(real_prices), len(real_prices) + future_days), future_predictions, label="Future Predictions")
     plt.xlabel("Days")
     plt.ylabel("Price")
     plt.legend()
-    plt.show()
+    return plt
+    #plt.show()
 
 #################
 # ARP Algorithm #
@@ -203,10 +205,52 @@ def ARP_algorithm(prices, prob):
     plt.show()
 
 
+
+
+
 ################
 # CustomTk GUI #
 ################
 import customtkinter as ctk
+from tkinter import *
+from PIL import Image
+
+# Content
+data = None # to store pricing data
+source = "" # stores if data is being pulled from a local file or online
+plot = None # stores plot data
+
+# Text content
+TF_desc = "Make longer-term predictions using Google's TensorFlow AI"
+APR_desc = "This uses pattern recognition to make shorter-term predictions "
+Online_desc = "Use data loaded from the internet"
+Local_desc = "Use a CSV file from your local drive"
+Stage1_header = "Choose where your data will come from"
+Stage2_header = "What algorithm will you use to make predictions"
+Stage3_header = "Press the button to show the predictions on a graph!"
+APR_settings_desc = '''
+Threshold Probability is how 'sure' the model needs to be for it to predict a buy. The higher the number the more 'sure'.
+'''
+TF_settings_desc = '''
+Prediction days ⇒ The number of days’ worth of data the model 
+will take into consideration when making a prediction.
+
+Epochs ⇒ The number of training iterations a model will undergo.
+
+Batch Size ⇒ The amount of data that will be passed through the 
+network in one training iteration before the model's internal parameters are updated.
+
+'''
+
+# Fonts
+header = ("Gill Sans MT",50)
+title = ("Gill Sans MT",30)
+
+# images
+APR_img = ctk.CTkImage(Image.open("Images/APR image.jpg"), size=(676,407))
+TF_img = ctk.CTkImage(Image.open("Images/TF image.jpg"), size=(814,407))
+Online_img = ctk.CTkImage(Image.open("Images/Online image.jpg"), size=(631,407))
+Local_img = ctk.CTkImage(Image.open("Images/Local image.jpg"), size=(400,411))
 
 # Making window
 ctk.set_appearance_mode("dark")
@@ -214,7 +258,7 @@ ctk.set_default_color_theme("NEA Custom Theme.json")
 
 window = ctk.CTk()  # Use CTk instead of Tk
 window.title("Learn Stocks")
-window.geometry("1000x800")
+window.geometry("2500x1500")
 
 # Making notebook (CustomTkinter doesn't have a direct notebook widget, so I use CTkTabview)
 notebook = ctk.CTkTabview(master=window, width=1000, height=1000)
@@ -236,6 +280,7 @@ S1_banner_frame = ctk.CTkFrame(master=Stage1)
 S1_main_frame = ctk.CTkFrame(master=Stage1)
 S1_main_left_frame = ctk.CTkFrame(master=S1_main_frame)
 S1_main_right_frame = ctk.CTkFrame(master=S1_main_frame)
+S1_online_settings_frame = ctk.CTkFrame(master=S1_main_frame)
 
 # GRID CONFIG
 # left column
@@ -248,20 +293,50 @@ S1_main_right_frame.rowconfigure((0, 1, 2, 3, 4), weight = 1)
 
 # Banner
 S1_banner_frame.place(x = 0, y = 0, relwidth = 1, relheight = 0.2)
-ctk.CTkLabel(S1_banner_frame, bg_color ="green", text="HEADER").pack(expand = True, fill ="both")
+ctk.CTkLabel(S1_banner_frame, bg_color = "#2c5881", text=Stage1_header, font=header).pack(expand = True, fill ="both")
 S1_main_frame.place(x = 0, rely = 0.2, relwidth = 1, relheight = 0.8)
+
+# Stage 1 button functions
+def STAGE1_Online_button_action():
+    if S1_main_right_frame.winfo_ismapped():
+        global source
+        source = "Online"
+        S1_main_right_frame.place_forget()
+        S1_online_settings_frame.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
+    else:
+        S1_online_settings_frame.place_forget()
+        S1_main_right_frame.place(relx=0.5, rely=0, relwidth=0.5, relheight=1)
+
+def STAGE1_Local_button_action():
+    # opening files
+    global data
+    global source
+    source = "Local"
+    from customtkinter import filedialog
+    filepath = filedialog.askopenfile(title="Open a CSV file", filetypes=[("Comma Separated Values", "*.csv")])
+    data = open(filepath, "r")
+    print(data.read())
+    data.close()
 
 # Left column
 S1_main_left_frame.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
-ctk.CTkLabel(S1_main_left_frame, text="Online").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
-ctk.CTkLabel(S1_main_left_frame, text="L IMAGE", bg_color ="red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
-STAGE1_L_button = ctk.CTkButton(master=S1_main_left_frame, text="LEFT").grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+ctk.CTkLabel(S1_main_left_frame, text="Online", font=title).grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(S1_main_left_frame, text="", image=Online_img).grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+ctk.CTkLabel(master=S1_main_left_frame, text=Online_desc).grid(row = 3, column = 0, sticky="nesw", columnspan = 3)
+STAGE1_L_button = ctk.CTkButton(master=S1_main_left_frame, text="Online", command=STAGE1_Online_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
 
 # Right column
 S1_main_right_frame.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
-ctk.CTkLabel(master=S1_main_right_frame, text="Local").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
-ctk.CTkLabel(master=S1_main_right_frame, text="R IMAGE", bg_color ="red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
-STAGE1_R_button = ctk.CTkButton(master=S1_main_right_frame, text="RIGHT").grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+ctk.CTkLabel(master=S1_main_right_frame, text="Local", font=title).grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(master=S1_main_right_frame, image=Local_img, text="").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+ctk.CTkLabel(master=S1_main_right_frame, text=Local_desc).grid(row = 3, column = 0, sticky="nesw", columnspan = 3)
+STAGE1_R_button = ctk.CTkButton(master=S1_main_right_frame, text="Local", command=STAGE1_Local_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+
+# Online settings frame
+# Dropdown box
+company = ctk.CTkComboBox(S1_online_settings_frame, values=["META", "^GSPC", "EURUSD=X"])
+company.set("select a company")
+company.pack(padx=300, pady=40, fill="x")
 
 # CONTENT FOR STAGE2
 # main layout widgets
@@ -283,58 +358,51 @@ S2_main_right_frame.rowconfigure((0,1,2,3,4), weight = 1)
 
 # place layout
 S2_banner_frame.place(x = 0, y = 0, relwidth = 1, relheight = 0.2)
-ctk.CTkLabel(S2_banner_frame, bg_color = "green", text="HEADER").pack(expand = True, fill = "both")
+ctk.CTkLabel(S2_banner_frame, bg_color = "#2c5881", font=header, text=Stage2_header).pack(expand = True, fill = "both")
 
 S2_main_frame.place(x = 0, rely = 0.2, relwidth = 1, relheight = 0.8)
-#ctk.CTkLabel(S2_main_frame, bg_color = "blue").pack(expand = True, fill = "both")
 
 S2_main_left_frame.place(relx = 0, rely = 0, relwidth = 0.5, relheight = 1)
 S2_main_right_frame.place(relx = 0.5, rely = 0, relwidth = 0.5, relheight = 1)
 
 # APR settings pane
 S2_APR_settings_frame = ctk.CTkFrame(master=S2_main_frame)
-prob_slider = ctk.DoubleVar(value=5)  # Initial value set to 50
 
 # Function to update the label with prob_slider value
 def prob_update_value(value):
     prob_slider.set(value)
-    label.configure(text=f"Value: {round(prob_slider.get())}")  # Format to 2 decimal places
-
-# Label to display the value
-label = ctk.CTkLabel(S2_APR_settings_frame, text=f"Value: {prob_slider.get()}")
-label.pack(pady=20)
+    prob_label.configure(text=f"Threshold Probability: {round(prob_slider.get(), 2)}")  # Format to 2 decimal places
 
 # Slider
-prob_slider = ctk.CTkSlider(S2_APR_settings_frame, from_=0, to=10, command=prob_update_value)
-prob_slider.set(prob_slider.get())  # Set initial value
+prob_slider = ctk.DoubleVar(value=0.68)  # Initial value set to 0.68
+prob_slider = ctk.CTkSlider(S2_APR_settings_frame, from_=0, to=1, command=prob_update_value)
+prob_slider.set(0.68)  # Set initial value
+
+prob_label = ctk.CTkLabel(S2_APR_settings_frame, text=f"Threshold Probability: {round(prob_slider.get(), 2)}")
+prob_label.pack(pady=20)
 prob_slider.pack(pady=20)
 
-# Dropdown box
-company = ctk.CTkComboBox(S2_APR_settings_frame, values=["company 1", "company 2"])
-company.set("select a company")
-company.pack(pady=20)
-# APR settings pane
-S2_APR_settings_frame = ctk.CTkFrame(master=S2_main_frame)
-prob_slider = ctk.DoubleVar(value=5)  # Initial value set to 5
+# APR run button
+def APR_run_func():
+    import yfinance as yf
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    global source
+    global data
+    if source == "Online":
+        ticker = yf.Ticker(company.cget("state"))
+        data = ticker.history(period="max")
 
-# Function to update the label with prob_slider value
-def update_value(value):
-    prob_slider.set(value)
-    label.configure(text=f"Value: {round(prob_slider.get())}")  # Format to 2 decimal places
+    ARP_algorithm(data, round(prob_slider.get()))
+    canvas = FigureCanvasTkAgg(plt, master=S3_main_frame)
+    canvas.draw()
 
-# Label to display the value
-label = ctk.CTkLabel(S2_APR_settings_frame, text=f"Value: {prob_slider.get()}")
-label.pack(pady=20)
+    # placing the canvas on the Tkinter window
+    canvas.get_tk_widget().pack()
 
-# Slider
-prob_slider = ctk.CTkSlider(S2_APR_settings_frame, from_=0, to=10, command=update_value)
-prob_slider.set(prob_slider.get())  # Set initial value
-prob_slider.pack(pady=20)
 
-# Dropdown box
-company = ctk.CTkComboBox(S2_APR_settings_frame, values=["company 1", "company 2"])
-company.set("select a company")
-company.pack(pady=20)
+APR_run = ctk.CTkButton(master=S2_APR_settings_frame, text="RUN", command=APR_run_func).pack(pady=20)
+ctk.CTkLabel(S2_APR_settings_frame, text=APR_settings_desc).pack()
 
 # TF settings pane
 S2_TF_settings_frame = ctk.CTkFrame(master=S2_main_frame)
@@ -343,30 +411,66 @@ S2_TF_settings_frame = ctk.CTkFrame(master=S2_main_frame)
 # Slider update functions
 def epoch_update_value(value):
     epoch_slider.set(value)
-    epoch_label.configure(text=f"Value: {round(epoch_slider.get())}")  # Format to 2 decimal places
+    epoch_label.configure(text=f"Epochs: {round(epoch_slider.get())}")  # Format to 2 decimal places
 
 def pred_days_update_value(value):
     pred_days_slider.set(value)
-    pred_days_label.configure(text=f"Value: {round(pred_days_slider.get())}")  # Format to 2 decimal places
+    pred_days_label.configure(text=f"Prediction Days: {round(pred_days_slider.get())}")  # Format to 2 decimal places
 
 def batch_size_update_value(value):
     batch_size_slider.set(value)
-    batch_size_label.configure(text=f"Value: {round(batch_size_slider.get())}")  # Format to 2 decimal places
+    batch_size_label.configure(text=f"Batch Size: {round(batch_size_slider.get())}")  # Format to 2 decimal places
 
-epoch_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=0, to=10, command=epoch_update_value)
-epoch_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Value: {epoch_slider.get()}")
+def future_days_update_value(value):
+    future_days_slider.set(value)
+    future_days_label.configure(text=f"Future Days: {round(future_days_slider.get())}")  # Format to 2 decimal places
+
+
+epoch_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=1, to=50, command=epoch_update_value)
+epoch_slider.set(25)
+epoch_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Epochs: {epoch_slider.get()}")
 epoch_label.pack(pady=20)
 epoch_slider.pack(pady=20)
 
-pred_days_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=0, to=10, command=pred_days_update_value)
-pred_days_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Value: {pred_days_slider.get()}")
+pred_days_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=10, to=90, command=pred_days_update_value)
+pred_days_slider.set(60)
+pred_days_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Prediction Days: {pred_days_slider.get()}")
 pred_days_label.pack(pady=20)
 pred_days_slider.pack(pady=20)
 
-batch_size_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=0, to=10, command=batch_size_update_value)
-batch_size_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Value: {batch_size_slider.get()}")
+batch_size_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=5, to=80, command=batch_size_update_value)
+batch_size_slider.set(32)
+batch_size_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Batch Size: {batch_size_slider.get()}")
 batch_size_label.pack(pady=20)
 batch_size_slider.pack(pady=20)
+
+future_days_slider = ctk.CTkSlider(S2_TF_settings_frame, from_=1, to=100, command=future_days_update_value)
+future_days_slider.set(50)
+future_days_label = ctk.CTkLabel(S2_TF_settings_frame, text=f"Future Days: {future_days_slider.get()}")
+future_days_label.pack(pady=20)
+future_days_slider.pack(pady=20)
+
+# TF run button
+def TF_run_func():
+    import yfinance as yf
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+    global source
+    global data
+    if source == "Online":
+        ticker = yf.Ticker(company.get())
+        data = ticker.history(period="max")
+
+    TensorFlow(data,
+                 round(pred_days_slider.get()),
+                 round(epoch_slider.get()),
+                 round(batch_size_slider.get()),
+                 round(future_days_slider.get()),
+                 company.get())
+
+
+TF_run = ctk.CTkButton(master=S2_TF_settings_frame, text="RUN", command=TF_run_func).pack(pady=20)
+ctk.CTkLabel(S2_TF_settings_frame, text=TF_settings_desc).pack()
 
 
 def STAGE2_L_button_action():
@@ -388,49 +492,36 @@ def STAGE2_R_button_action():
 
 
 # left column content
-ctk.CTkLabel(S2_main_left_frame, text="APR").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
-ctk.CTkLabel(S2_main_left_frame, text="", bg_color = "red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
-STAGE2_L_button = ctk.CTkButton(master=S2_main_left_frame, text="LEFT", command=STAGE2_L_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+ctk.CTkLabel(S2_main_left_frame, font=title, text="APR").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(S2_main_left_frame, text="", image=APR_img).grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+ctk.CTkLabel(master=S2_main_left_frame, text=APR_desc).grid(row = 3, column = 0, sticky="nesw", columnspan = 3)
+STAGE2_L_button = ctk.CTkButton(master=S2_main_left_frame, text="APR", command=STAGE2_L_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
 
 # right column content
-ctk.CTkLabel(master=S2_main_right_frame, text="TensorFlow").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
-ctk.CTkLabel(master=S2_main_right_frame, text="R IMAGE", bg_color = "red").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
-ctk.CTkLabel(master=S2_main_right_frame, text="How to keep text in a frame").grid(row = 3, column = 0, sticky="nesw", columnspan = 3)
-STAGE2_R_button = ctk.CTkButton(master=S2_main_right_frame, text="RIGHT", command=STAGE2_R_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
+ctk.CTkLabel(master=S2_main_right_frame, font=title, text="TensorFlow").grid(row = 0, column = 0, sticky="nesw", columnspan = 3)
+ctk.CTkLabel(master=S2_main_right_frame, image=TF_img, text="").grid(row = 1, column = 0, sticky="nesw", columnspan = 3, rowspan=2)
+ctk.CTkLabel(master=S2_main_right_frame, text=TF_desc).grid(row = 3, column = 0, sticky="nesw", columnspan = 3)
+STAGE2_R_button = ctk.CTkButton(master=S2_main_right_frame, text="TensorFlow", command=STAGE2_R_button_action).grid(row = 4, column = 1, sticky="ew", columnspan = 1)
 
-# run
-window.mainloop()
+# CONTENT FOR STAGE3
+# main layout widgets
+S3_banner_frame = ctk.CTkFrame(master=Stage3)
+S3_main_frame = ctk.CTkFrame(master=Stage3)
+
+# place layout
+S3_banner_frame.place(x = 0, y = 0, relwidth = 1, relheight = 0.2)
+ctk.CTkLabel(S3_banner_frame, bg_color = "#2c5881", font=header, text=Stage3_header).pack(expand = True, fill = "both")
+
+S3_main_frame.place(x = 0, rely = 0.2, relwidth = 1, relheight = 0.8)
+
+# Plot button
+def STAGE3_plot_func():
+    plt.show()
+
+STAGE3_plot_button = ctk.CTkButton(master=S3_main_frame, text="PLOT", command=STAGE3_plot_func).place(relx=0.5, rely=0.5, anchor="center")
 
 #########
 # START #
 #########
-
-# FOR TF
-import yfinance as yf
-import datetime as dt
-securities = ["META", "^GSPC", "EURUSD=X"]
-print('''
-1. META
-2. S&P500
-3. EUR/USD
-''')
-# taking inputs for TF
-security_select = int(input("Select the security to predict >> "))
-prediction_days = int(input("Enter the number of prediction days"))
-epochs = int(input("Enter the number of training epochs"))
-batch_size = int(input("Enter the training batch size"))
-future_days = int(input("Enter number of days you want to predict"))
-security_name = securities[security_select-1]
-ticker = yf.Ticker(security_name)
-
-start = dt.datetime(1990,1,1)
-end = dt.datetime(2022,1,1)
-
-data = ticker.history(period = "max")
-
-TensorFlow(data, prediction_days, epochs, batch_size, 15)
-
-# FOR APR
-prices = yf.Ticker("^GSPC")
-prices = prices.history(period="max")
-ARP_algorithm(prices, 0.68)
+# run
+window.mainloop()

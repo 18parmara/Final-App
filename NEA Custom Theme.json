@@ -92,12 +92,12 @@
   },
   "CTkComboBox": {
     "corner_radius": 6,
-    "border_width": 2,
-    "fg_color": ["#F9F9FA", "#343638"],
-    "border_color": ["#979DA2", "#565B5E"],
-    "button_color": ["#979DA2", "#565B5E"],
-    "button_hover_color": ["#6E7174", "#7A848D"],
-    "text_color": ["gray14", "gray84"],
+    "border_width": 1,
+    "fg_color": ["#F9F9FA", "#0f2e42"],
+    "border_color": ["#979DA2", "#3ab6f0"],
+    "button_color": ["#979DA2", "#2c5881"],
+    "button_hover_color": ["#6E7174", "#3ab6f0"],
+    "text_color": ["gray14", "#F5F5F5"],
     "text_color_disabled": ["gray50", "gray45"]
   },
   "CTkScrollbar": {
@@ -143,7 +143,7 @@
     },
     "Windows": {
       "family": "Gill Sans MT",
-      "size": 18,
+      "size": 19,
       "weight": "normal"
     },
     "Linux": {

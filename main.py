@@ -105,9 +105,9 @@ def TensorFlow(data, prediction_days, epochs, batch_size, future_days, security_
     #plt.show()
 
 #################
-# ARP Algorithm #
+# APR Algorithm #
 #################
-def ARP_algorithm(prices, prob):
+def APR_algorithm(prices, prob):
     import pandas as pd
     import matplotlib.pyplot as plt
     from sklearn.ensemble import RandomForestClassifier
@@ -393,7 +393,7 @@ def APR_run_func():
         ticker = yf.Ticker(company.cget("state"))
         data = ticker.history(period="max")
 
-    ARP_algorithm(data, round(prob_slider.get()))
+    APR_algorithm(data, round(prob_slider.get()))
     canvas = FigureCanvasTkAgg(plt, master=S3_main_frame)
     canvas.draw()
 
